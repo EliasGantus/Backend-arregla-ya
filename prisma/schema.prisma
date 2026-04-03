@@ -1,0 +1,85 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CLIENTE
+  PROFESIONAL
+  ADMIN
+}
+
+enum ServiceRequestStatus {
+  DRAFT
+  OPEN
+  QUOTED
+  ASSIGNED
+  CANCELLED
+}
+
+enum QuoteStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+}
+
+model User {
+  id               String           @id @default(uuid())
+  email            String           @unique
+  passwordHash     String
+  fullName         String
+  role             UserRole
+  city             String?
+  zone             String?
+  refreshTokenHash String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
+  serviceRequests  ServiceRequest[] @relation("ClientServiceRequests")
+  quotes           Quote[]          @relation("ProfessionalQuotes")
+}
+
+model Category {
+  id              String           @id @default(uuid())
+  name            String
+  slug            String           @unique
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  serviceRequests ServiceRequest[]
+}
+
+model ServiceRequest {
+  id          String               @id @default(uuid())
+  title       String
+  description String
+  status      ServiceRequestStatus @default(OPEN)
+  city        String
+  zone        String
+  budget      String?
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  clientId    String
+  categoryId  String
+  client      User                 @relation("ClientServiceRequests", fields: [clientId], references: [id])
+  category    Category             @relation(fields: [categoryId], references: [id])
+  quotes      Quote[]
+}
+
+model Quote {
+  id               String      @id @default(uuid())
+  amount           String
+  status           QuoteStatus @default(PENDING)
+  message          String
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+  serviceRequestId String
+  professionalId   String
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+  professional     User           @relation("ProfessionalQuotes", fields: [professionalId], references: [id])
+
+  @@unique([serviceRequestId, professionalId])
+}

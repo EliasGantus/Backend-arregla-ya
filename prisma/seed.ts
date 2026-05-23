@@ -109,6 +109,25 @@ const main = async () => {
     },
   });
 
+  await prisma.booking.upsert({
+    where: { id: 'seed-booking-1' },
+    update: {},
+    create: {
+      id: 'seed-booking-1',
+      serviceRequestId: serviceRequest.id,
+      clientId: cliente.id,
+      professionalId: profesional.id,
+      scheduledAt: new Date('2026-06-05T14:00:00.000Z'),
+      status: 'PENDING',
+      notes: 'Turno de prueba generado por seed.',
+    },
+  });
+
+  await prisma.serviceRequest.update({
+    where: { id: serviceRequest.id },
+    data: { status: 'ASSIGNED' },
+  });
+
   await prisma.$disconnect();
   console.log('Seed completado.');
 };

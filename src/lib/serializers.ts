@@ -1,4 +1,14 @@
-import type { Category, Quote, QuoteStatus, ServiceRequest, ServiceRequestStatus, User, UserRole } from '@prisma/client';
+import type {
+  Booking,
+  BookingStatus,
+  Category,
+  Quote,
+  QuoteStatus,
+  ServiceRequest,
+  ServiceRequestStatus,
+  User,
+  UserRole,
+} from '@prisma/client';
 
 const roleMap: Record<UserRole, 'cliente' | 'profesional' | 'admin'> = {
   CLIENTE: 'cliente',
@@ -22,6 +32,16 @@ const quoteStatusMap: Record<QuoteStatus, 'pending' | 'accepted' | 'rejected' | 
   ACCEPTED: 'accepted',
   REJECTED: 'rejected',
   WITHDRAWN: 'withdrawn',
+};
+
+const bookingStatusMap: Record<
+  BookingStatus,
+  'pending' | 'confirmed' | 'completed' | 'cancelled'
+> = {
+  PENDING: 'pending',
+  CONFIRMED: 'confirmed',
+  COMPLETED: 'completed',
+  CANCELLED: 'cancelled',
 };
 
 export const serializeUser = (user: Pick<User, 'id' | 'email' | 'fullName' | 'role' | 'city' | 'zone'>) => ({
@@ -64,4 +84,24 @@ export const serializeQuote = (
   status: quoteStatusMap[quote.status],
   message: quote.message,
   createdAt: quote.createdAt.toISOString(),
+});
+
+export const serializeBooking = (
+  booking: Booking & {
+    client: Pick<User, 'id' | 'fullName'>;
+    professional: Pick<User, 'id' | 'fullName'>;
+    serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
+  },
+) => ({
+  id: booking.id,
+  serviceRequestId: booking.serviceRequestId,
+  serviceRequestTitle: booking.serviceRequest.title,
+  clientId: booking.clientId,
+  clientName: booking.client.fullName,
+  professionalId: booking.professionalId,
+  professionalName: booking.professional.fullName,
+  scheduledAt: booking.scheduledAt.toISOString(),
+  status: bookingStatusMap[booking.status],
+  notes: booking.notes ?? undefined,
+  createdAt: booking.createdAt.toISOString(),
 });

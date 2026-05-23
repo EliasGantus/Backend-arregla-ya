@@ -92,6 +92,20 @@ const main = async () => {
     },
   });
 
+  await prisma.professionalSpecialty.upsert({
+    where: {
+      professionalId_categoryId: {
+        professionalId: profesional.id,
+        categoryId: plomeria.id,
+      },
+    },
+    update: {},
+    create: {
+      professionalId: profesional.id,
+      categoryId: plomeria.id,
+    },
+  });
+
   await prisma.quote.upsert({
     where: {
       serviceRequestId_professionalId: {

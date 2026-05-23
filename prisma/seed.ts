@@ -8,7 +8,7 @@ const password = '123456';
 const main = async () => {
   const passwordHash = await bcrypt.hash(password, 10);
 
-  const [cliente, profesional, admin] = await Promise.all([
+  const [cliente, profesional] = await Promise.all([
     prisma.user.upsert({
       where: { email: 'cliente@arreglaya.com' },
       update: {},

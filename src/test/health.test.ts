@@ -6,9 +6,10 @@ describe('GET /health', () => {
   it('responde con estado ok', async () => {
     const app = createApp();
     const response = await request(app).get('/health');
+    const body = response.body as { status?: unknown; service?: unknown };
 
     expect(response.status).toBe(200);
-    expect(response.body.status).toBe('ok');
-    expect(response.body.service).toBe('arreglaya-backend');
+    expect(body.status).toBe('ok');
+    expect(body.service).toBe('arreglaya-backend');
   });
 });

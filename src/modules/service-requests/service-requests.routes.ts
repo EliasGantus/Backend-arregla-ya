@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import type { ServiceRequestStatus, UserRole } from '@prisma/client';
+import type { ServiceRequestStatus } from '@prisma/client';
 import { z } from 'zod';
 
 import { asyncHandler } from '../../lib/async-handler.js';

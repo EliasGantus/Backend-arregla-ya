@@ -13,6 +13,8 @@ export const errorHandler = (
   response: Response,
   _next: NextFunction,
 ) => {
+  void _next;
+
   if (error instanceof ZodError) {
     response.status(400).json({
       message: 'Payload inválido.',

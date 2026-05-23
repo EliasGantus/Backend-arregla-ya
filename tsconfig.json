@@ -12,5 +12,5 @@
     "types": ["node", "vitest/globals"],
     "baseUrl": "."
   },
-  "include": ["src", "prisma/seed.ts"]
+  "include": ["src", "prisma/seed.ts", "vitest.config.ts"]
 }

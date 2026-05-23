@@ -28,19 +28,28 @@ enum QuoteStatus {
   WITHDRAWN
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
 model User {
-  id               String           @id @default(uuid())
-  email            String           @unique
-  passwordHash     String
-  fullName         String
-  role             UserRole
-  city             String?
-  zone             String?
-  refreshTokenHash String?
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  serviceRequests  ServiceRequest[] @relation("ClientServiceRequests")
-  quotes           Quote[]          @relation("ProfessionalQuotes")
+  id                   String           @id @default(uuid())
+  email                String           @unique
+  passwordHash         String
+  fullName             String
+  role                 UserRole
+  city                 String?
+  zone                 String?
+  refreshTokenHash     String?
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  serviceRequests      ServiceRequest[] @relation("ClientServiceRequests")
+  quotes               Quote[]          @relation("ProfessionalQuotes")
+  clientBookings       Booking[]        @relation("ClientBookings")
+  professionalBookings Booking[]        @relation("ProfessionalBookings")
 }
 
 model Category {
@@ -67,19 +76,39 @@ model ServiceRequest {
   client      User                 @relation("ClientServiceRequests", fields: [clientId], references: [id])
   category    Category             @relation(fields: [categoryId], references: [id])
   quotes      Quote[]
+  bookings    Booking[]
 }
 
 model Quote {
-  id               String      @id @default(uuid())
+  id               String         @id @default(uuid())
   amount           String
-  status           QuoteStatus @default(PENDING)
+  status           QuoteStatus    @default(PENDING)
   message          String
-  createdAt        DateTime    @default(now())
-  updatedAt        DateTime    @updatedAt
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
   serviceRequestId String
   professionalId   String
   serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
   professional     User           @relation("ProfessionalQuotes", fields: [professionalId], references: [id])
 
   @@unique([serviceRequestId, professionalId])
+}
+
+model Booking {
+  id               String         @id @default(uuid())
+  scheduledAt      DateTime
+  status           BookingStatus  @default(PENDING)
+  notes            String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  serviceRequestId String
+  clientId         String
+  professionalId   String
+  serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
+  client           User           @relation("ClientBookings", fields: [clientId], references: [id])
+  professional     User           @relation("ProfessionalBookings", fields: [professionalId], references: [id])
+
+  @@index([clientId])
+  @@index([professionalId, scheduledAt])
+  @@index([serviceRequestId])
 }

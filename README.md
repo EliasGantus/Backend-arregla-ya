@@ -53,6 +53,10 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 - `PATCH /service-requests/:id`
 - `GET /quotes/me`
 - `POST /service-requests/:id/quotes`
+- `GET /bookings`
+- `GET /bookings/:id`
+- `POST /bookings`
+- `PATCH /bookings/:id`
 - `GET /admin/users`
 - `GET /admin/service-requests`
 

@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 import { adminRouter } from '../modules/admin/admin.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
+import { bookingsRouter } from '../modules/bookings/bookings.routes.js';
 import { categoriesRouter } from '../modules/categories/categories.routes.js';
 import { quotesRouter } from '../modules/quotes/quotes.routes.js';
 import { serviceRequestsRouter } from '../modules/service-requests/service-requests.routes.js';
@@ -14,4 +15,5 @@ apiRouter.use(categoriesRouter);
 apiRouter.use(usersRouter);
 apiRouter.use(serviceRequestsRouter);
 apiRouter.use(quotesRouter);
+apiRouter.use(bookingsRouter);
 apiRouter.use(adminRouter);

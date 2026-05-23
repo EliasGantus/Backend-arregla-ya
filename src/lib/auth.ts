@@ -1,3 +1,5 @@
+import { randomUUID } from 'node:crypto';
+
 import bcrypt from 'bcryptjs';
 import jwt, { type Secret, type SignOptions } from 'jsonwebtoken';
 import type { UserRole } from '@prisma/client';
@@ -13,6 +15,7 @@ interface AccessTokenPayload {
 interface RefreshTokenPayload {
   sub: string;
   type: 'refresh';
+  jti: string;
 }
 
 const signToken = (payload: object, secret: Secret, expiresIn: string) =>
@@ -37,7 +40,11 @@ export const authUtils = {
     return signToken(payload, env.JWT_ACCESS_SECRET, env.JWT_ACCESS_EXPIRES_IN);
   },
   signRefreshToken(userId: string) {
-    return signToken({ sub: userId, type: 'refresh' }, env.JWT_REFRESH_SECRET, env.JWT_REFRESH_EXPIRES_IN);
+    return signToken(
+      { sub: userId, type: 'refresh', jti: randomUUID() },
+      env.JWT_REFRESH_SECRET,
+      env.JWT_REFRESH_EXPIRES_IN,
+    );
   },
   verifyAccessToken(token: string) {
     return jwt.verify(token, env.JWT_ACCESS_SECRET) as AccessTokenPayload;

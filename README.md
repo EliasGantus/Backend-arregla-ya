@@ -52,6 +52,10 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 - `PATCH /users/:id`
 - `DELETE /users/:id`
 - `GET /categories`
+- `GET /categories/:id`
+- `POST /categories`
+- `PATCH /categories/:id`
+- `DELETE /categories/:id`
 - `GET /service-requests`
 - `GET /service-requests/:id`
 - `POST /service-requests`

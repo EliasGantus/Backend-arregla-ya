@@ -2,6 +2,10 @@ import type {
   Booking,
   BookingStatus,
   Category,
+  Notification,
+  NotificationChannel,
+  NotificationStatus,
+  NotificationType,
   Payment,
   PaymentProvider,
   PaymentStatus,
@@ -61,6 +65,27 @@ const paymentStatusMap: Record<
 
 const paymentProviderMap: Record<PaymentProvider, 'mercado_pago'> = {
   MERCADO_PAGO: 'mercado_pago',
+};
+
+const notificationTypeMap: Record<
+  NotificationType,
+  'booking_created' | 'booking_confirmed' | 'booking_reminder' | 'booking_status_changed'
+> = {
+  BOOKING_CREATED: 'booking_created',
+  BOOKING_CONFIRMED: 'booking_confirmed',
+  BOOKING_REMINDER: 'booking_reminder',
+  BOOKING_STATUS_CHANGED: 'booking_status_changed',
+};
+
+const notificationChannelMap: Record<NotificationChannel, 'push' | 'email'> = {
+  PUSH: 'push',
+  EMAIL: 'email',
+};
+
+const notificationStatusMap: Record<NotificationStatus, 'pending' | 'sent' | 'failed'> = {
+  PENDING: 'pending',
+  SENT: 'sent',
+  FAILED: 'failed',
 };
 
 export const serializeUser = (
@@ -162,6 +187,21 @@ export const serializePayment = (
   receiptNumber: payment.receiptNumber ?? undefined,
   paidAt: payment.paidAt?.toISOString(),
   createdAt: payment.createdAt.toISOString(),
+});
+
+export const serializeNotification = (notification: Notification) => ({
+  id: notification.id,
+  type: notificationTypeMap[notification.type],
+  channel: notificationChannelMap[notification.channel],
+  status: notificationStatusMap[notification.status],
+  title: notification.title,
+  body: notification.body,
+  recipientId: notification.recipientId,
+  bookingId: notification.bookingId ?? undefined,
+  metadata: notification.metadata ?? undefined,
+  readAt: notification.readAt?.toISOString(),
+  sentAt: notification.sentAt?.toISOString(),
+  createdAt: notification.createdAt.toISOString(),
 });
 
 export const serializeReview = (

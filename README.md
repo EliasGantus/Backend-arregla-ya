@@ -29,6 +29,11 @@ PAYMENT_SUCCESS_URL="http://localhost:5173/pagos/exito"
 PAYMENT_PENDING_URL="http://localhost:5173/pagos/pendiente"
 PAYMENT_FAILURE_URL="http://localhost:5173/pagos/error"
 MERCADOPAGO_WEBHOOK_SECRET=""
+NOTIFICATION_EMAIL_FROM="no-reply@arreglaya.local"
+NOTIFICATION_EMAIL_PROVIDER_URL=""
+NOTIFICATION_EMAIL_PROVIDER_TOKEN=""
+NOTIFICATION_PUSH_PROVIDER_URL=""
+NOTIFICATION_PUSH_PROVIDER_TOKEN=""
 ```
 
 ## Scripts
@@ -77,6 +82,9 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 - `GET /payments/:id/receipt`
 - `POST /bookings/:id/payments`
 - `POST /payments/webhooks/mercadopago`
+- `GET /notifications`
+- `PATCH /notifications/:id/read`
+- `POST /bookings/:id/reminders`
 - `GET /professionals/search`
 - `GET /professionals/:id/reviews`
 - `POST /emergencies`

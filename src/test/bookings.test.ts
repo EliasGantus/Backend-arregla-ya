@@ -16,6 +16,12 @@ const prismaMocks = vi.hoisted(() => ({
   userFindUnique: vi.fn<(args: unknown) => Promise<User | null>>(),
 }));
 
+const notificationMocks = vi.hoisted(() => ({
+  notifyBookingConfirmed: vi.fn(),
+  notifyBookingCreated: vi.fn(),
+  notifyBookingStatusChanged: vi.fn(),
+}));
+
 vi.mock('../lib/prisma.js', () => ({
   prisma: {
     booking: {
@@ -35,9 +41,13 @@ vi.mock('../lib/prisma.js', () => ({
   },
 }));
 
+vi.mock('../lib/notification-service.js', () => ({
+  notificationService: notificationMocks,
+}));
+
 type BookingWithRelations = Booking & {
-  client: Pick<User, 'id' | 'fullName'>;
-  professional: Pick<User, 'id' | 'fullName'>;
+  client: Pick<User, 'id' | 'email' | 'fullName'>;
+  professional: Pick<User, 'id' | 'email' | 'fullName'>;
   serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
 };
 
@@ -126,10 +136,12 @@ const withRelations = (booking: Booking): BookingWithRelations => ({
   ...booking,
   client: {
     id: booking.clientId,
+    email: 'cliente@arreglaya.com',
     fullName: 'Lucia Benitez',
   },
   professional: {
     id: booking.professionalId,
+    email: 'pro@arreglaya.com',
     fullName: 'Carlos Mendoza',
   },
   serviceRequest: {
@@ -195,6 +207,7 @@ describe('bookings routes', () => {
     expect(createArgs?.data?.clientId).toBe('client-1');
     expect(createArgs?.data?.professionalId).toBe('pro-1');
     expect(createArgs?.data?.status).toBe('PENDING');
+    expect(notificationMocks.notifyBookingCreated).toHaveBeenCalledWith(booking);
   });
 
   it('rechaza una reserva cuando el profesional ya tiene un turno activo en el horario', async () => {
@@ -254,6 +267,7 @@ describe('bookings routes', () => {
     expect(response.status).toBe(200);
     expect(body.status).toBe('confirmed');
     expect(updateArgs?.data?.status).toBe('CONFIRMED');
+    expect(notificationMocks.notifyBookingConfirmed).toHaveBeenCalledWith(updatedBooking);
   });
 
   it('impide que el cliente confirme una reserva', async () => {

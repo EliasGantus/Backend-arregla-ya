@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { asyncHandler } from '../../lib/async-handler.js';
 import { HttpError } from '../../lib/http-error.js';
+import { notificationService } from '../../lib/notification-service.js';
 import { prisma } from '../../lib/prisma.js';
 import { serializeBooking } from '../../lib/serializers.js';
 import { authenticate, requireRoles } from '../../middleware/authenticate.js';
@@ -14,12 +15,14 @@ const bookingInclude = {
   client: {
     select: {
       id: true,
+      email: true,
       fullName: true,
     },
   },
   professional: {
     select: {
       id: true,
+      email: true,
       fullName: true,
     },
   },
@@ -196,6 +199,7 @@ bookingsRouter.post(
       where: { id: serviceRequest.id },
       data: { status: 'ASSIGNED' },
     });
+    await notificationService.notifyBookingCreated(booking);
 
     response.status(201).json(serializeBooking(booking));
   }),
@@ -238,6 +242,14 @@ bookingsRouter.patch(
         where: { id: current.serviceRequestId },
         data: { status: 'OPEN' },
       });
+    }
+
+    if (status && status !== current.status) {
+      if (status === 'CONFIRMED') {
+        await notificationService.notifyBookingConfirmed(booking);
+      } else {
+        await notificationService.notifyBookingStatusChanged(booking);
+      }
     }
 
     response.json(serializeBooking(booking));

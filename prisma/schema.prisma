@@ -47,6 +47,24 @@ enum PaymentProvider {
   MERCADO_PAGO
 }
 
+enum NotificationType {
+  BOOKING_CREATED
+  BOOKING_CONFIRMED
+  BOOKING_REMINDER
+  BOOKING_STATUS_CHANGED
+}
+
+enum NotificationChannel {
+  PUSH
+  EMAIL
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
 model User {
   id                   String                  @id @default(uuid())
   email                String                  @unique
@@ -68,6 +86,7 @@ model User {
   reviewsGiven         Review[]                @relation("ClientReviews")
   reviewsReceived      Review[]                @relation("ProfessionalReviews")
   payments             Payment[]               @relation("ClientPayments")
+  notifications        Notification[]
 }
 
 model Category {
@@ -128,6 +147,7 @@ model Booking {
   professional     User           @relation("ProfessionalBookings", fields: [professionalId], references: [id])
   review           Review?
   payment          Payment?
+  notifications    Notification[]
 
   @@index([clientId])
   @@index([professionalId, scheduledAt])
@@ -152,6 +172,29 @@ model Payment {
   client        User            @relation("ClientPayments", fields: [clientId], references: [id])
 
   @@index([clientId])
+  @@index([status])
+}
+
+model Notification {
+  id            String              @id @default(uuid())
+  type          NotificationType
+  channel       NotificationChannel
+  status        NotificationStatus  @default(PENDING)
+  title         String
+  body          String
+  metadata      Json?
+  readAt        DateTime?
+  sentAt        DateTime?
+  failureReason String?
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+  recipientId   String
+  bookingId     String?
+  recipient     User                @relation(fields: [recipientId], references: [id])
+  booking       Booking?            @relation(fields: [bookingId], references: [id])
+
+  @@index([recipientId, readAt])
+  @@index([bookingId])
   @@index([status])
 }
 

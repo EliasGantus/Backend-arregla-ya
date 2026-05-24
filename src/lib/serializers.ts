@@ -2,6 +2,9 @@ import type {
   Booking,
   BookingStatus,
   Category,
+  Payment,
+  PaymentProvider,
+  PaymentStatus,
   Quote,
   QuoteStatus,
   Review,
@@ -43,6 +46,21 @@ const bookingStatusMap: Record<
   CONFIRMED: 'confirmed',
   COMPLETED: 'completed',
   CANCELLED: 'cancelled',
+};
+
+const paymentStatusMap: Record<
+  PaymentStatus,
+  'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded'
+> = {
+  PENDING: 'pending',
+  APPROVED: 'approved',
+  REJECTED: 'rejected',
+  CANCELLED: 'cancelled',
+  REFUNDED: 'refunded',
+};
+
+const paymentProviderMap: Record<PaymentProvider, 'mercado_pago'> = {
+  MERCADO_PAGO: 'mercado_pago',
 };
 
 export const serializeUser = (
@@ -120,6 +138,30 @@ export const serializeBooking = (
   status: bookingStatusMap[booking.status],
   notes: booking.notes ?? undefined,
   createdAt: booking.createdAt.toISOString(),
+});
+
+export const serializePayment = (
+  payment: Payment & {
+    booking: Booking & {
+      serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
+      professional: Pick<User, 'id' | 'fullName'>;
+    };
+  },
+) => ({
+  id: payment.id,
+  bookingId: payment.bookingId,
+  serviceRequestId: payment.booking.serviceRequestId,
+  serviceRequestTitle: payment.booking.serviceRequest.title,
+  professionalId: payment.booking.professionalId,
+  professionalName: payment.booking.professional.fullName,
+  amountCents: payment.amountCents,
+  currency: payment.currency,
+  status: paymentStatusMap[payment.status],
+  provider: paymentProviderMap[payment.provider],
+  checkoutUrl: payment.checkoutUrl ?? undefined,
+  receiptNumber: payment.receiptNumber ?? undefined,
+  paidAt: payment.paidAt?.toISOString(),
+  createdAt: payment.createdAt.toISOString(),
 });
 
 export const serializeReview = (

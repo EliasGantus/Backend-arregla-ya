@@ -11,6 +11,12 @@ const envSchema = z.object({
   JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
   JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
   CORS_ORIGIN: z.string().default('http://localhost:5173'),
+  MERCADOPAGO_ACCESS_TOKEN: z.string().optional(),
+  MERCADOPAGO_API_BASE_URL: z.string().url().default('https://api.mercadopago.com'),
+  PAYMENT_SUCCESS_URL: z.string().url().default('http://localhost:5173/pagos/exito'),
+  PAYMENT_PENDING_URL: z.string().url().default('http://localhost:5173/pagos/pendiente'),
+  PAYMENT_FAILURE_URL: z.string().url().default('http://localhost:5173/pagos/error'),
+  MERCADOPAGO_WEBHOOK_SECRET: z.string().optional(),
 });
 
 export const env = envSchema.parse(process.env);

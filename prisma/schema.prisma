@@ -35,6 +35,18 @@ enum BookingStatus {
   CANCELLED
 }
 
+enum PaymentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentProvider {
+  MERCADO_PAGO
+}
+
 model User {
   id                   String                  @id @default(uuid())
   email                String                  @unique
@@ -55,6 +67,7 @@ model User {
   specialties          ProfessionalSpecialty[]
   reviewsGiven         Review[]                @relation("ClientReviews")
   reviewsReceived      Review[]                @relation("ProfessionalReviews")
+  payments             Payment[]               @relation("ClientPayments")
 }
 
 model Category {
@@ -114,10 +127,32 @@ model Booking {
   client           User           @relation("ClientBookings", fields: [clientId], references: [id])
   professional     User           @relation("ProfessionalBookings", fields: [professionalId], references: [id])
   review           Review?
+  payment          Payment?
 
   @@index([clientId])
   @@index([professionalId, scheduledAt])
   @@index([serviceRequestId])
+}
+
+model Payment {
+  id            String          @id @default(uuid())
+  amountCents   Int
+  currency      String          @default("ARS")
+  status        PaymentStatus   @default(PENDING)
+  provider      PaymentProvider @default(MERCADO_PAGO)
+  externalId    String?         @unique
+  checkoutUrl   String?
+  receiptNumber String?
+  paidAt        DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  bookingId     String          @unique
+  clientId      String
+  booking       Booking         @relation(fields: [bookingId], references: [id])
+  client        User            @relation("ClientPayments", fields: [clientId], references: [id])
+
+  @@index([clientId])
+  @@index([status])
 }
 
 model Review {

@@ -36,29 +36,31 @@ enum BookingStatus {
 }
 
 model User {
-  id                   String           @id @default(uuid())
-  email                String           @unique
+  id                   String                  @id @default(uuid())
+  email                String                  @unique
   passwordHash         String
   fullName             String
   role                 UserRole
   city                 String?
   zone                 String?
   refreshTokenHash     String?
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  serviceRequests      ServiceRequest[] @relation("ClientServiceRequests")
-  quotes               Quote[]          @relation("ProfessionalQuotes")
-  clientBookings       Booking[]        @relation("ClientBookings")
-  professionalBookings Booking[]        @relation("ProfessionalBookings")
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+  serviceRequests      ServiceRequest[]        @relation("ClientServiceRequests")
+  quotes               Quote[]                 @relation("ProfessionalQuotes")
+  clientBookings       Booking[]               @relation("ClientBookings")
+  professionalBookings Booking[]               @relation("ProfessionalBookings")
+  specialties          ProfessionalSpecialty[]
 }
 
 model Category {
-  id              String           @id @default(uuid())
+  id              String                  @id @default(uuid())
   name            String
-  slug            String           @unique
-  createdAt       DateTime         @default(now())
-  updatedAt       DateTime         @updatedAt
+  slug            String                  @unique
+  createdAt       DateTime                @default(now())
+  updatedAt       DateTime                @updatedAt
   serviceRequests ServiceRequest[]
+  professionals   ProfessionalSpecialty[]
 }
 
 model ServiceRequest {
@@ -111,4 +113,15 @@ model Booking {
   @@index([clientId])
   @@index([professionalId, scheduledAt])
   @@index([serviceRequestId])
+}
+
+model ProfessionalSpecialty {
+  professionalId String
+  categoryId     String
+  createdAt      DateTime @default(now())
+  professional   User     @relation(fields: [professionalId], references: [id])
+  category       Category @relation(fields: [categoryId], references: [id])
+
+  @@id([professionalId, categoryId])
+  @@index([categoryId])
 }

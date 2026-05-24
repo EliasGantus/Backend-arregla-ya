@@ -66,6 +66,8 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 - `GET /bookings/:id`
 - `POST /bookings`
 - `PATCH /bookings/:id`
+- `GET /professionals/search`
+- `POST /emergencies`
 - `GET /admin/users`
 - `GET /admin/service-requests`
 

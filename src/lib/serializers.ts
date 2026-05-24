@@ -4,6 +4,7 @@ import type {
   Category,
   Quote,
   QuoteStatus,
+  Review,
   ServiceRequest,
   ServiceRequestStatus,
   User,
@@ -44,14 +45,29 @@ const bookingStatusMap: Record<
   CANCELLED: 'cancelled',
 };
 
-export const serializeUser = (user: Pick<User, 'id' | 'email' | 'fullName' | 'role' | 'city' | 'zone'>) => ({
-  id: user.id,
-  email: user.email,
-  fullName: user.fullName,
-  role: roleMap[user.role],
-  city: user.city ?? undefined,
-  zone: user.zone ?? undefined,
-});
+export const serializeUser = (
+  user: Pick<User, 'id' | 'email' | 'fullName' | 'role' | 'city' | 'zone'> &
+    Partial<Pick<User, 'ratingAverage' | 'ratingCount'>>,
+) => {
+  const serialized = {
+    id: user.id,
+    email: user.email,
+    fullName: user.fullName,
+    role: roleMap[user.role],
+    city: user.city ?? undefined,
+    zone: user.zone ?? undefined,
+  };
+
+  if (typeof user.ratingAverage === 'number' && typeof user.ratingCount === 'number') {
+    return {
+      ...serialized,
+      ratingAverage: user.ratingAverage,
+      ratingCount: user.ratingCount,
+    };
+  }
+
+  return serialized;
+};
 
 export const serializeCategory = (category: Pick<Category, 'id' | 'name' | 'slug'>) => ({
   id: category.id,
@@ -104,4 +120,23 @@ export const serializeBooking = (
   status: bookingStatusMap[booking.status],
   notes: booking.notes ?? undefined,
   createdAt: booking.createdAt.toISOString(),
+});
+
+export const serializeReview = (
+  review: Review & {
+    client: Pick<User, 'id' | 'fullName'>;
+    professional: Pick<User, 'id' | 'fullName'>;
+    booking: Pick<Booking, 'id' | 'serviceRequestId'>;
+  },
+) => ({
+  id: review.id,
+  bookingId: review.bookingId,
+  serviceRequestId: review.booking.serviceRequestId,
+  clientId: review.clientId,
+  clientName: review.client.fullName,
+  professionalId: review.professionalId,
+  professionalName: review.professional.fullName,
+  rating: review.rating,
+  comment: review.comment ?? undefined,
+  createdAt: review.createdAt.toISOString(),
 });

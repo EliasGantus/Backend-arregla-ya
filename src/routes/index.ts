@@ -4,6 +4,7 @@ import { adminRouter } from '../modules/admin/admin.routes.js';
 import { authRouter } from '../modules/auth/auth.routes.js';
 import { bookingsRouter } from '../modules/bookings/bookings.routes.js';
 import { categoriesRouter } from '../modules/categories/categories.routes.js';
+import { docsRouter } from '../modules/docs/docs.routes.js';
 import { notificationsRouter } from '../modules/notifications/notifications.routes.js';
 import { paymentsRouter } from '../modules/payments/payments.routes.js';
 import { professionalsRouter } from '../modules/professionals/professionals.routes.js';
@@ -14,6 +15,7 @@ import { usersRouter } from '../modules/users/users.routes.js';
 
 export const apiRouter = Router();
 
+apiRouter.use(docsRouter);
 apiRouter.use('/auth', authRouter);
 apiRouter.use(categoriesRouter);
 apiRouter.use(professionalsRouter);

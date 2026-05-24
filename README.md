@@ -51,6 +51,8 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 
 ## Endpoints principales
 
+- `GET /docs`
+- `GET /docs/openapi.json`
 - `POST /auth/register`
 - `POST /auth/login`
 - `POST /auth/refresh`

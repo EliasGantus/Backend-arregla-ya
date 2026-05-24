@@ -23,6 +23,12 @@ JWT_REFRESH_SECRET="refresh-secret-dev"
 JWT_ACCESS_EXPIRES_IN="15m"
 JWT_REFRESH_EXPIRES_IN="7d"
 CORS_ORIGIN="http://localhost:5173"
+MERCADOPAGO_ACCESS_TOKEN=""
+MERCADOPAGO_API_BASE_URL="https://api.mercadopago.com"
+PAYMENT_SUCCESS_URL="http://localhost:5173/pagos/exito"
+PAYMENT_PENDING_URL="http://localhost:5173/pagos/pendiente"
+PAYMENT_FAILURE_URL="http://localhost:5173/pagos/error"
+MERCADOPAGO_WEBHOOK_SECRET=""
 ```
 
 ## Scripts
@@ -66,6 +72,11 @@ El contenedor PostgreSQL de este proyecto se expone en `localhost:5433` para no 
 - `GET /bookings/:id`
 - `POST /bookings`
 - `PATCH /bookings/:id`
+- `GET /payments`
+- `GET /payments/:id`
+- `GET /payments/:id/receipt`
+- `POST /bookings/:id/payments`
+- `POST /payments/webhooks/mercadopago`
 - `GET /professionals/search`
 - `GET /professionals/:id/reviews`
 - `POST /emergencies`

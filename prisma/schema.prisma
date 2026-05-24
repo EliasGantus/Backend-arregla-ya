@@ -43,6 +43,8 @@ model User {
   role                 UserRole
   city                 String?
   zone                 String?
+  ratingAverage        Float                   @default(0)
+  ratingCount          Int                     @default(0)
   refreshTokenHash     String?
   createdAt            DateTime                @default(now())
   updatedAt            DateTime                @updatedAt
@@ -51,6 +53,8 @@ model User {
   clientBookings       Booking[]               @relation("ClientBookings")
   professionalBookings Booking[]               @relation("ProfessionalBookings")
   specialties          ProfessionalSpecialty[]
+  reviewsGiven         Review[]                @relation("ClientReviews")
+  reviewsReceived      Review[]                @relation("ProfessionalReviews")
 }
 
 model Category {
@@ -109,10 +113,28 @@ model Booking {
   serviceRequest   ServiceRequest @relation(fields: [serviceRequestId], references: [id])
   client           User           @relation("ClientBookings", fields: [clientId], references: [id])
   professional     User           @relation("ProfessionalBookings", fields: [professionalId], references: [id])
+  review           Review?
 
   @@index([clientId])
   @@index([professionalId, scheduledAt])
   @@index([serviceRequestId])
+}
+
+model Review {
+  id             String   @id @default(uuid())
+  rating         Int
+  comment        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  bookingId      String   @unique
+  clientId       String
+  professionalId String
+  booking        Booking  @relation(fields: [bookingId], references: [id])
+  client         User     @relation("ClientReviews", fields: [clientId], references: [id])
+  professional   User     @relation("ProfessionalReviews", fields: [professionalId], references: [id])
+
+  @@index([professionalId])
+  @@index([clientId])
 }
 
 model ProfessionalSpecialty {

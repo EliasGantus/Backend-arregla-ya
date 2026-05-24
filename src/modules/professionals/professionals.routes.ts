@@ -69,6 +69,8 @@ const serializeProfessional = (professional: ProfessionalWithSpecialties, availa
   email: professional.email,
   city: professional.city ?? undefined,
   zone: professional.zone ?? undefined,
+  ratingAverage: professional.ratingAverage,
+  ratingCount: professional.ratingCount,
   available,
   specialties: professional.specialties.map(({ category }) => serializeCategory(category)),
 });

@@ -63,6 +63,8 @@ const makeUser = (overrides: Partial<User> = {}): User => ({
   role: 'ADMIN',
   city: 'Buenos Aires',
   zone: 'Centro',
+  ratingAverage: 0,
+  ratingCount: 0,
   refreshTokenHash: null,
   createdAt: new Date('2026-04-02T00:00:00.000Z'),
   updatedAt: new Date('2026-04-02T00:00:00.000Z'),

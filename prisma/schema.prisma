@@ -18,6 +18,7 @@ enum ServiceRequestStatus {
   OPEN
   QUOTED
   ASSIGNED
+  COMPLETED
   CANCELLED
 }
 
@@ -107,6 +108,7 @@ model ServiceRequest {
   city        String
   zone        String
   budget      String?
+  photos      String[]
   createdAt   DateTime             @default(now())
   updatedAt   DateTime             @updatedAt
   clientId    String

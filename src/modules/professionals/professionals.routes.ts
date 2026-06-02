@@ -100,10 +100,13 @@ const isProfessionalAvailable = async (professionalId: string, scheduledAt?: Dat
     return true;
   }
 
+  const windowStart = new Date(scheduledAt.getTime() - 2 * 60 * 60 * 1000);
+  const windowEnd = new Date(scheduledAt.getTime() + 2 * 60 * 60 * 1000);
+
   const conflictingBooking = await prisma.booking.findFirst({
     where: {
       professionalId,
-      scheduledAt,
+      scheduledAt: { gte: windowStart, lte: windowEnd },
       status: { in: [...activeBookingStatuses] },
     },
   });

@@ -78,10 +78,13 @@ const ensureProfessionalAvailable = async (
   scheduledAt: Date,
   excludeBookingId?: string,
 ) => {
+  const windowStart = new Date(scheduledAt.getTime() - 2 * 60 * 60 * 1000);
+  const windowEnd = new Date(scheduledAt.getTime() + 2 * 60 * 60 * 1000);
+
   const conflictingBooking = await prisma.booking.findFirst({
     where: {
       professionalId,
-      scheduledAt,
+      scheduledAt: { gte: windowStart, lte: windowEnd },
       status: { in: activeBookingStatuses },
       id: excludeBookingId ? { not: excludeBookingId } : undefined,
     },
@@ -241,6 +244,13 @@ bookingsRouter.patch(
       await prisma.serviceRequest.update({
         where: { id: current.serviceRequestId },
         data: { status: 'OPEN' },
+      });
+    }
+
+    if (status === 'COMPLETED') {
+      await prisma.serviceRequest.update({
+        where: { id: current.serviceRequestId },
+        data: { status: 'COMPLETED' },
       });
     }
 

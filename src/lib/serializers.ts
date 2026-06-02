@@ -26,12 +26,13 @@ const roleMap: Record<UserRole, 'cliente' | 'profesional' | 'admin'> = {
 
 const serviceRequestStatusMap: Record<
   ServiceRequestStatus,
-  'draft' | 'open' | 'quoted' | 'assigned' | 'cancelled'
+  'draft' | 'open' | 'quoted' | 'assigned' | 'completed' | 'cancelled'
 > = {
   DRAFT: 'draft',
   OPEN: 'open',
   QUOTED: 'quoted',
   ASSIGNED: 'assigned',
+  COMPLETED: 'completed',
   CANCELLED: 'cancelled',
 };
 
@@ -129,14 +130,19 @@ export const serializeServiceRequest = (
   city: serviceRequest.city,
   zone: serviceRequest.zone,
   budget: serviceRequest.budget ?? undefined,
+  photos: serviceRequest.photos,
   createdAt: serviceRequest.createdAt.toISOString(),
 });
 
 export const serializeQuote = (
-  quote: Quote & { professional: Pick<User, 'id' | 'fullName'> },
+  quote: Quote & {
+    professional: Pick<User, 'id' | 'fullName'>;
+    serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
+  },
 ) => ({
   id: quote.id,
   serviceRequestId: quote.serviceRequestId,
+  serviceRequestTitle: quote.serviceRequest.title,
   professionalId: quote.professionalId,
   professionalName: quote.professional.fullName,
   amount: quote.amount,

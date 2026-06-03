@@ -15,6 +15,7 @@ const createSchema = z.object({
   city: z.string().min(2),
   zone: z.string().min(2),
   budget: z.string().optional(),
+  photos: z.array(z.string()).max(4).optional(),
 });
 
 const updateSchema = z.object({
@@ -98,6 +99,7 @@ serviceRequestsRouter.post(
         city: payload.city,
         zone: payload.zone,
         budget: payload.budget,
+        photos: payload.photos ?? [],
         clientId: request.auth!.userId,
         categoryId: payload.categoryId,
         status: 'OPEN',

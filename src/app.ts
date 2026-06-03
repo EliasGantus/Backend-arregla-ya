@@ -15,6 +15,7 @@ export const createApp = () => {
     }),
   );
   app.use(express.json());
+  app.use('/uploads', express.static('public/uploads'));
 
   app.get('/health', (_request, response) => {
     response.json({

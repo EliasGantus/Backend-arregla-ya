@@ -33,6 +33,12 @@ quotesRouter.get(
             fullName: true,
           },
         },
+        serviceRequest: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -84,6 +90,12 @@ quotesRouter.post(
           select: {
             id: true,
             fullName: true,
+          },
+        },
+        serviceRequest: {
+          select: {
+            id: true,
+            title: true,
           },
         },
       },

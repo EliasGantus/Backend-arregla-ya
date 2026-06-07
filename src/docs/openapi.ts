@@ -406,6 +406,18 @@ export const openApiDocument = {
       },
     },
     '/service-requests/{id}/quotes': {
+      get: {
+        tags: ['Quotes'],
+        security: bearerSecurity,
+        summary: 'Lista cotizaciones de una solicitud propia para clientes o administradores.',
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        responses: {
+          '200': arrayResponse('#/components/schemas/Quote'),
+          '401': unauthorizedResponse,
+          '403': forbiddenResponse,
+          '404': notFoundResponse,
+        },
+      },
       post: {
         tags: ['Quotes'],
         security: bearerSecurity,

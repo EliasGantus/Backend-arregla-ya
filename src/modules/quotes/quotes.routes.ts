@@ -18,6 +18,46 @@ export const quotesRouter = Router();
 quotesRouter.use(authenticate);
 
 quotesRouter.get(
+  '/service-requests/:id/quotes',
+  requireRoles(['CLIENTE', 'ADMIN']),
+  asyncHandler(async (request, response) => {
+    const serviceRequestId = String(request.params.id);
+    const serviceRequest = await prisma.serviceRequest.findUnique({
+      where: { id: serviceRequestId },
+    });
+
+    if (!serviceRequest) {
+      throw new HttpError(404, 'Solicitud no encontrada.', 'SERVICE_REQUEST_NOT_FOUND');
+    }
+
+    if (request.auth!.role === 'CLIENTE' && serviceRequest.clientId !== request.auth!.userId) {
+      throw new HttpError(403, 'No puedes consultar cotizaciones de otra solicitud.', 'FORBIDDEN');
+    }
+
+    const quotes = await prisma.quote.findMany({
+      where: { serviceRequestId },
+      include: {
+        professional: {
+          select: {
+            id: true,
+            fullName: true,
+          },
+        },
+        serviceRequest: {
+          select: {
+            id: true,
+            title: true,
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    response.json(quotes.map(serializeQuote));
+  }),
+);
+
+quotesRouter.get(
   '/quotes/me',
   requireRoles(['PROFESIONAL', 'ADMIN']),
   asyncHandler(async (request, response) => {

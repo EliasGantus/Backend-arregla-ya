@@ -117,6 +117,7 @@ const makeServiceRequest = (overrides: Partial<ServiceRequest> = {}): ServiceReq
   clientId: 'client-1',
   categoryId: 'category-1',
   ...overrides,
+  photos: overrides.photos ?? [],
 });
 
 const makeBooking = (overrides: Partial<Booking> = {}): Booking => ({

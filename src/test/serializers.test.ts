@@ -57,7 +57,7 @@ describe('serializers', () => {
       },
       serviceRequest: {
         id: 'sr1',
-        title: 'PlomerÃ­a',
+        title: 'Plomería',
       },
     });
 

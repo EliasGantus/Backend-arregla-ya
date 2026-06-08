@@ -1,6 +1,8 @@
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 
+import { buildSeedUserUpsertArgs, seedUsers } from './seed-data.js';
+
 const prisma = new PrismaClient();
 
 const password = '123456';
@@ -9,42 +11,9 @@ const main = async () => {
   const passwordHash = await bcrypt.hash(password, 10);
 
   const [cliente, profesional] = await Promise.all([
-    prisma.user.upsert({
-      where: { email: 'cliente@arreglaya.com' },
-      update: {},
-      create: {
-        email: 'cliente@arreglaya.com',
-        passwordHash,
-        fullName: 'Lucia Benitez',
-        role: 'CLIENTE',
-        city: 'Buenos Aires',
-        zone: 'Caballito',
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'pro@arreglaya.com' },
-      update: {},
-      create: {
-        email: 'pro@arreglaya.com',
-        passwordHash,
-        fullName: 'Carlos Mendoza',
-        role: 'PROFESIONAL',
-        city: 'Buenos Aires',
-        zone: 'Almagro',
-      },
-    }),
-    prisma.user.upsert({
-      where: { email: 'admin@arreglaya.com' },
-      update: {},
-      create: {
-        email: 'admin@arreglaya.com',
-        passwordHash,
-        fullName: 'Sofia Herrera',
-        role: 'ADMIN',
-        city: 'Buenos Aires',
-        zone: 'Centro',
-      },
-    }),
+    prisma.user.upsert(buildSeedUserUpsertArgs(seedUsers.cliente, passwordHash)),
+    prisma.user.upsert(buildSeedUserUpsertArgs(seedUsers.profesional, passwordHash)),
+    prisma.user.upsert(buildSeedUserUpsertArgs(seedUsers.admin, passwordHash)),
   ]);
 
   const [plomeria, electricidad] = await Promise.all([

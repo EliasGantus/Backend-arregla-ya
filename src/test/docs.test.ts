@@ -25,6 +25,7 @@ describe('docs routes', () => {
       '/categories',
       '/service-requests',
       '/quotes/me',
+      '/quotes/{id}',
       '/bookings',
       '/professionals/search',
       '/reviews',

@@ -405,6 +405,23 @@ export const openApiDocument = {
         },
       },
     },
+    '/quotes/{id}': {
+      patch: {
+        tags: ['Quotes'],
+        security: bearerSecurity,
+        summary: 'Acepta o rechaza una cotizacion recibida.',
+        parameters: [{ $ref: '#/components/parameters/IdPath' }],
+        requestBody: jsonRequest({ $ref: '#/components/schemas/UpdateQuoteRequest' }),
+        responses: {
+          '200': objectResponse('#/components/schemas/Quote'),
+          '400': validationErrorResponse,
+          '401': unauthorizedResponse,
+          '403': forbiddenResponse,
+          '404': notFoundResponse,
+          '409': objectResponse('#/components/schemas/ErrorResponse', 'Cotizacion ya resuelta.'),
+        },
+      },
+    },
     '/service-requests/{id}/quotes': {
       get: {
         tags: ['Quotes'],
@@ -902,6 +919,13 @@ export const openApiDocument = {
         properties: {
           amount: { type: 'string' },
           message: { type: 'string', minLength: 10 },
+        },
+      },
+      UpdateQuoteRequest: {
+        type: 'object',
+        required: ['status'],
+        properties: {
+          status: { type: 'string', enum: ['accepted', 'rejected'] },
         },
       },
       Booking: {

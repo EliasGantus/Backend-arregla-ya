@@ -13,6 +13,25 @@ const createSchema = z.object({
   message: z.string().min(10),
 });
 
+const updateSchema = z.object({
+  status: z.enum(['accepted', 'rejected']),
+});
+
+const quoteInclude = {
+  professional: {
+    select: {
+      id: true,
+      fullName: true,
+    },
+  },
+  serviceRequest: {
+    select: {
+      id: true,
+      title: true,
+    },
+  },
+} as const;
+
 export const quotesRouter = Router();
 
 quotesRouter.use(authenticate);
@@ -36,20 +55,7 @@ quotesRouter.get(
 
     const quotes = await prisma.quote.findMany({
       where: { serviceRequestId },
-      include: {
-        professional: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        serviceRequest: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
+      include: quoteInclude,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -66,20 +72,7 @@ quotesRouter.get(
 
     const quotes = await prisma.quote.findMany({
       where,
-      include: {
-        professional: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        serviceRequest: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
+      include: quoteInclude,
       orderBy: { createdAt: 'desc' },
     });
 
@@ -125,20 +118,7 @@ quotesRouter.post(
         message: payload.message,
         status: 'PENDING',
       },
-      include: {
-        professional: {
-          select: {
-            id: true,
-            fullName: true,
-          },
-        },
-        serviceRequest: {
-          select: {
-            id: true,
-            title: true,
-          },
-        },
-      },
+      include: quoteInclude,
     });
 
     if (serviceRequest.status === 'OPEN') {
@@ -149,5 +129,65 @@ quotesRouter.post(
     }
 
     response.status(201).json(serializeQuote(quote));
+  }),
+);
+
+quotesRouter.patch(
+  '/quotes/:id',
+  requireRoles(['CLIENTE', 'ADMIN']),
+  asyncHandler(async (request, response) => {
+    const payload = updateSchema.parse(request.body);
+    const quoteId = String(request.params.id);
+    const current = await prisma.quote.findUnique({
+      where: { id: quoteId },
+      include: {
+        serviceRequest: {
+          select: {
+            id: true,
+            clientId: true,
+            status: true,
+          },
+        },
+      },
+    });
+
+    if (!current) {
+      throw new HttpError(404, 'Cotización no encontrada.', 'QUOTE_NOT_FOUND');
+    }
+
+    if (
+      request.auth!.role === 'CLIENTE' &&
+      current.serviceRequest.clientId !== request.auth!.userId
+    ) {
+      throw new HttpError(403, 'No puedes modificar cotizaciones de otra solicitud.', 'FORBIDDEN');
+    }
+
+    if (current.status !== 'PENDING') {
+      throw new HttpError(409, 'La cotización ya fue resuelta.', 'QUOTE_ALREADY_RESOLVED');
+    }
+
+    const status = payload.status === 'accepted' ? 'ACCEPTED' : 'REJECTED';
+    const quote = await prisma.quote.update({
+      where: { id: current.id },
+      data: { status },
+      include: quoteInclude,
+    });
+
+    if (status === 'ACCEPTED') {
+      await prisma.quote.updateMany({
+        where: {
+          serviceRequestId: current.serviceRequestId,
+          id: { not: current.id },
+        },
+        data: { status: 'REJECTED' },
+      });
+
+      await prisma.serviceRequest.update({
+        where: { id: current.serviceRequest.id },
+        data: { status: 'ASSIGNED' },
+      });
+    }
+
+    response.json(serializeQuote(quote));
   }),
 );

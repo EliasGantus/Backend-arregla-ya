@@ -30,6 +30,7 @@ describe('serializers', () => {
       city: 'Buenos Aires',
       zone: 'Palermo',
       budget: '$85.000',
+      photos: [],
       createdAt: new Date('2026-04-02T00:00:00.000Z'),
       updatedAt: new Date('2026-04-02T00:00:00.000Z'),
       clientId: 'client-1',
@@ -53,6 +54,10 @@ describe('serializers', () => {
       professional: {
         id: 'pro-1',
         fullName: 'Carlos Mendoza',
+      },
+      serviceRequest: {
+        id: 'sr1',
+        title: 'PlomerÃ­a',
       },
     });
 

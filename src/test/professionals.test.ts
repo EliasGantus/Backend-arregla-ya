@@ -142,6 +142,7 @@ const makeServiceRequest = (
   categoryId: 'category-1',
   category: makeCategory(),
   ...overrides,
+  photos: overrides.photos ?? [],
 });
 
 const makeBooking = (overrides: Partial<Booking> = {}): BookingWithRelations => ({

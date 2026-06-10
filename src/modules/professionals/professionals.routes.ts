@@ -37,6 +37,16 @@ const bookingInclude = {
       title: true,
     },
   },
+  payment: {
+    select: {
+      id: true,
+    },
+  },
+  review: {
+    select: {
+      id: true,
+    },
+  },
 } as const;
 
 const searchSchema = z.object({

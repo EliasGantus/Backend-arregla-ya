@@ -1,4 +1,4 @@
-import type { Booking, ServiceRequest, User } from '@prisma/client';
+import type { Booking, Payment, Review, ServiceRequest, User } from '@prisma/client';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -49,6 +49,8 @@ type BookingWithRelations = Booking & {
   client: Pick<User, 'id' | 'email' | 'fullName'>;
   professional: Pick<User, 'id' | 'email' | 'fullName'>;
   serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
+  payment: Pick<Payment, 'id'> | null;
+  review: Pick<Review, 'id'> | null;
 };
 
 type BookingResponse = {
@@ -77,6 +79,10 @@ type BookingFindArgs = {
     clientId?: unknown;
     professionalId?: unknown;
     status?: unknown;
+  };
+  include?: {
+    payment?: unknown;
+    review?: unknown;
   };
 };
 
@@ -149,6 +155,8 @@ const withRelations = (booking: Booking): BookingWithRelations => ({
     id: booking.serviceRequestId,
     title: 'Reparación de cañería',
   },
+  payment: null,
+  review: null,
 });
 
 const bearerTokenFor = (user: User) =>
@@ -311,5 +319,9 @@ describe('bookings routes', () => {
     expect(response.status).toBe(200);
     expect(body).toHaveLength(1);
     expect(findArgs?.where?.professionalId).toBe('pro-1');
+    expect(findArgs?.include).toMatchObject({
+      payment: { select: { id: true } },
+      review: { select: { id: true } },
+    });
   });
 });

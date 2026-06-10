@@ -11,6 +11,10 @@ type OpenApiResponse = {
   paths?: Record<string, unknown>;
   components?: {
     securitySchemes?: Record<string, unknown>;
+    schemas?: Record<string, {
+      required?: string[];
+      properties?: Record<string, unknown>;
+    }>;
   };
 };
 
@@ -50,5 +54,35 @@ describe('docs routes', () => {
     expect(response.headers['content-type']).toContain('text/html');
     expect(response.text).toContain('/docs/openapi.json');
     expect(response.text).toContain('SwaggerUIBundle');
+  });
+
+  it('documenta metadatos de flujo en solicitudes y reservas', async () => {
+    const response = await request(createApp()).get('/docs/openapi.json');
+    const body = response.body as OpenApiResponse;
+    const serviceRequest = body.components?.schemas?.ServiceRequest;
+    const booking = body.components?.schemas?.Booking;
+
+    expect(response.status).toBe(200);
+    expect(body.components?.schemas?.FlowNextStep).toBeDefined();
+    expect(serviceRequest?.properties?.status).toMatchObject({
+      enum: expect.arrayContaining(['completed']),
+    });
+    expect(serviceRequest?.properties).toMatchObject({
+      statusLabel: { type: 'string' },
+      statusDescription: { type: 'string' },
+      availableActions: expect.objectContaining({ type: 'array' }),
+      nextStep: { $ref: '#/components/schemas/FlowNextStep' },
+      photos: expect.objectContaining({ type: 'array' }),
+    });
+    expect(serviceRequest?.required).toEqual(expect.arrayContaining(['photos']));
+    expect(booking?.properties).toMatchObject({
+      statusLabel: { type: 'string' },
+      statusDescription: { type: 'string' },
+      availableActions: expect.objectContaining({ type: 'array' }),
+      nextStep: { $ref: '#/components/schemas/FlowNextStep' },
+      hasPayment: { type: 'boolean' },
+      hasReview: { type: 'boolean' },
+    });
+    expect(booking?.required).toEqual(expect.arrayContaining(['hasPayment', 'hasReview']));
   });
 });

@@ -53,6 +53,150 @@ const bookingStatusMap: Record<
   CANCELLED: 'cancelled',
 };
 
+export type FlowAction =
+  | 'create_quote'
+  | 'accept_quote'
+  | 'book'
+  | 'confirm_booking'
+  | 'pay'
+  | 'complete_work'
+  | 'review';
+
+type FlowStep = {
+  action: FlowAction | null;
+  label: string;
+  description: string;
+};
+
+type FlowCopy = {
+  statusLabel: string;
+  statusDescription: string;
+  availableActions: FlowAction[];
+  next: FlowStep;
+};
+
+const completedStep: FlowStep = {
+  action: null,
+  label: 'Sin acciones pendientes',
+  description: 'Este paso ya fue completado.',
+};
+
+const actionNextSteps: Partial<Record<FlowAction, FlowStep>> = {
+  complete_work: {
+    action: 'complete_work',
+    label: 'Marcar trabajo como terminado',
+    description: 'Finaliza el trabajo para habilitar la calificacion del cliente.',
+  },
+};
+
+const serviceRequestFlowCopy: Record<ServiceRequestStatus, FlowCopy> = {
+  DRAFT: {
+    statusLabel: 'Borrador',
+    statusDescription: 'Completa los datos de la solicitud antes de publicarla.',
+    availableActions: [],
+    next: {
+      action: null,
+      label: 'Completar solicitud',
+      description: 'Agrega la informacion necesaria para que los profesionales puedan cotizar.',
+    },
+  },
+  OPEN: {
+    statusLabel: 'Solicitud abierta',
+    statusDescription: 'Los profesionales pueden revisar el pedido y enviar cotizaciones.',
+    availableActions: ['create_quote'],
+    next: {
+      action: 'create_quote',
+      label: 'Enviar cotizacion',
+      description: 'Prepara una propuesta para que el cliente pueda evaluarla.',
+    },
+  },
+  QUOTED: {
+    statusLabel: 'Cotizaciones recibidas',
+    statusDescription: 'Revisa las propuestas disponibles y elegi la mejor opcion.',
+    availableActions: ['accept_quote'],
+    next: {
+      action: 'accept_quote',
+      label: 'Comparar cotizaciones',
+      description: 'Compara precios, mensajes y profesionales antes de aceptar una propuesta.',
+    },
+  },
+  ASSIGNED: {
+    statusLabel: 'Profesional asignado',
+    statusDescription: 'La solicitud ya tiene un profesional seleccionado para coordinar el servicio.',
+    availableActions: [],
+    next: {
+      action: null,
+      label: 'Seguir reserva',
+      description: 'Revisa el estado desde tus reservas.',
+    },
+  },
+  COMPLETED: {
+    statusLabel: 'Trabajo completado',
+    statusDescription: 'El servicio fue marcado como completado.',
+    availableActions: [],
+    next: completedStep,
+  },
+  CANCELLED: {
+    statusLabel: 'Solicitud cancelada',
+    statusDescription: 'La solicitud fue cancelada y no requiere nuevas acciones.',
+    availableActions: [],
+    next: completedStep,
+  },
+};
+
+const bookingFlowCopy: Record<BookingStatus, FlowCopy> = {
+  PENDING: {
+    statusLabel: 'Reserva pendiente',
+    statusDescription: 'La reserva espera confirmacion del profesional.',
+    availableActions: ['confirm_booking'],
+    next: {
+      action: 'confirm_booking',
+      label: 'Confirmar reserva',
+      description: 'Confirma el horario para dejar la visita agendada.',
+    },
+  },
+  CONFIRMED: {
+    statusLabel: 'Reserva confirmada',
+    statusDescription: 'La reserva esta confirmada y lista para avanzar con el pago o cierre del trabajo.',
+    availableActions: ['pay', 'complete_work'],
+    next: {
+      action: 'pay',
+      label: 'Pagar servicio',
+      description: 'Completa el pago para registrar el servicio.',
+    },
+  },
+  COMPLETED: {
+    statusLabel: 'Trabajo completado',
+    statusDescription: 'El trabajo finalizo y el cliente puede dejar su calificacion.',
+    availableActions: ['review'],
+    next: {
+      action: 'review',
+      label: 'Calificar servicio',
+      description: 'Comparte tu experiencia para ayudar a otros clientes.',
+    },
+  },
+  CANCELLED: {
+    statusLabel: 'Reserva cancelada',
+    statusDescription: 'La reserva fue cancelada y no requiere nuevas acciones.',
+    availableActions: [],
+    next: completedStep,
+  },
+};
+
+const resolveNextStep = (flow: FlowCopy, availableActions: FlowAction[]) => {
+  if (flow.next.action && !availableActions.includes(flow.next.action)) {
+    const nextAction = availableActions[0];
+
+    if (nextAction && actionNextSteps[nextAction]) {
+      return actionNextSteps[nextAction];
+    }
+
+    return completedStep;
+  }
+
+  return flow.next;
+};
+
 const paymentStatusMap: Record<
   PaymentStatus,
   'pending' | 'approved' | 'rejected' | 'cancelled' | 'refunded'
@@ -121,18 +265,27 @@ export const serializeCategory = (category: Pick<Category, 'id' | 'name' | 'slug
 
 export const serializeServiceRequest = (
   serviceRequest: ServiceRequest & { category: Pick<Category, 'id' | 'name' | 'slug'> },
-) => ({
-  id: serviceRequest.id,
-  title: serviceRequest.title,
-  description: serviceRequest.description,
-  status: serviceRequestStatusMap[serviceRequest.status],
-  category: serializeCategory(serviceRequest.category),
-  city: serviceRequest.city,
-  zone: serviceRequest.zone,
-  budget: serviceRequest.budget ?? undefined,
-  photos: serviceRequest.photos,
-  createdAt: serviceRequest.createdAt.toISOString(),
-});
+) => {
+  const flow = serviceRequestFlowCopy[serviceRequest.status];
+  const availableActions = flow.availableActions;
+
+  return {
+    id: serviceRequest.id,
+    title: serviceRequest.title,
+    description: serviceRequest.description,
+    status: serviceRequestStatusMap[serviceRequest.status],
+    statusLabel: flow.statusLabel,
+    statusDescription: flow.statusDescription,
+    availableActions: [...availableActions],
+    nextStep: { ...resolveNextStep(flow, availableActions) },
+    category: serializeCategory(serviceRequest.category),
+    city: serviceRequest.city,
+    zone: serviceRequest.zone,
+    budget: serviceRequest.budget ?? undefined,
+    photos: serviceRequest.photos,
+    createdAt: serviceRequest.createdAt.toISOString(),
+  };
+};
 
 export const serializeQuote = (
   quote: Quote & {
@@ -156,20 +309,45 @@ export const serializeBooking = (
     client: Pick<User, 'id' | 'fullName'>;
     professional: Pick<User, 'id' | 'fullName'>;
     serviceRequest: Pick<ServiceRequest, 'id' | 'title'>;
+    payment: Pick<Payment, 'id'> | null;
+    review: Pick<Review, 'id'> | null;
   },
-) => ({
-  id: booking.id,
-  serviceRequestId: booking.serviceRequestId,
-  serviceRequestTitle: booking.serviceRequest.title,
-  clientId: booking.clientId,
-  clientName: booking.client.fullName,
-  professionalId: booking.professionalId,
-  professionalName: booking.professional.fullName,
-  scheduledAt: booking.scheduledAt.toISOString(),
-  status: bookingStatusMap[booking.status],
-  notes: booking.notes ?? undefined,
-  createdAt: booking.createdAt.toISOString(),
-});
+) => {
+  const flow = bookingFlowCopy[booking.status];
+  const hasPayment = Boolean(booking.payment);
+  const hasReview = Boolean(booking.review);
+  const availableActions = flow.availableActions.filter((action) => {
+    if (action === 'pay') {
+      return !hasPayment;
+    }
+
+    if (action === 'review') {
+      return !hasReview;
+    }
+
+    return true;
+  });
+
+  return {
+    id: booking.id,
+    serviceRequestId: booking.serviceRequestId,
+    serviceRequestTitle: booking.serviceRequest.title,
+    clientId: booking.clientId,
+    clientName: booking.client.fullName,
+    professionalId: booking.professionalId,
+    professionalName: booking.professional.fullName,
+    scheduledAt: booking.scheduledAt.toISOString(),
+    status: bookingStatusMap[booking.status],
+    statusLabel: flow.statusLabel,
+    statusDescription: flow.statusDescription,
+    availableActions: [...availableActions],
+    nextStep: { ...resolveNextStep(flow, availableActions) },
+    hasPayment,
+    hasReview,
+    notes: booking.notes ?? undefined,
+    createdAt: booking.createdAt.toISOString(),
+  };
+};
 
 export const serializePayment = (
   payment: Payment & {

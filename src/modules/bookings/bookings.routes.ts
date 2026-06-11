@@ -1,4 +1,4 @@
-import type { BookingStatus, UserRole } from '@prisma/client';
+import type { Booking, BookingStatus, Prisma, UserRole } from '@prisma/client';
 import { Router } from 'express';
 import { z } from 'zod';
 
@@ -32,7 +32,19 @@ const bookingInclude = {
       title: true,
     },
   },
+  payment: {
+    select: {
+      id: true,
+    },
+  },
+  review: {
+    select: {
+      id: true,
+    },
+  },
 } as const;
+
+type BookingWithDetails = Prisma.BookingGetPayload<{ include: typeof bookingInclude }>;
 
 const createSchema = z.object({
   serviceRequestId: z.string().min(1),
@@ -46,13 +58,6 @@ const updateSchema = z.object({
   status: z.enum(['pending', 'confirmed', 'completed', 'cancelled']).optional(),
   notes: z.string().min(3).optional(),
 });
-
-const statusMap: Record<z.infer<typeof updateSchema>['status'] & string, BookingStatus> = {
-  pending: 'PENDING',
-  confirmed: 'CONFIRMED',
-  completed: 'COMPLETED',
-  cancelled: 'CANCELLED',
-};
 
 const canManageBooking = (
   role: UserRole,
@@ -95,16 +100,56 @@ const ensureProfessionalAvailable = async (
   }
 };
 
-const resolveAllowedStatus = (role: UserRole, status: z.infer<typeof updateSchema>['status']) => {
+const resolveAllowedStatus = (
+  role: UserRole,
+  userId: string,
+  booking: Booking,
+  status: z.infer<typeof updateSchema>['status'],
+): BookingStatus | undefined => {
   if (!status) {
     return undefined;
   }
 
-  if (role === 'CLIENTE' && status !== 'cancelled') {
-    throw new HttpError(403, 'El cliente solo puede cancelar reservas.', 'FORBIDDEN');
+  if (status === 'cancelled') {
+    if (booking.status !== 'PENDING') {
+      throw new HttpError(409, 'Solo se pueden cancelar reservas pendientes.', 'INVALID_BOOKING_TRANSITION');
+    }
+    if (role !== 'ADMIN' && booking.clientId !== userId) {
+      throw new HttpError(403, 'Solo el cliente puede cancelar esta reserva.', 'FORBIDDEN');
+    }
+    return 'CANCELLED';
   }
 
-  return statusMap[status];
+  if (status === 'confirmed') {
+    if (booking.status !== 'PENDING') {
+      throw new HttpError(409, 'Solo se pueden confirmar reservas pendientes.', 'INVALID_BOOKING_TRANSITION');
+    }
+    if (role !== 'ADMIN' && booking.professionalId !== userId) {
+      throw new HttpError(403, 'Solo el profesional asignado puede confirmar esta reserva.', 'FORBIDDEN');
+    }
+    return 'CONFIRMED';
+  }
+
+  if (status === 'completed') {
+    if (booking.status !== 'CONFIRMED') {
+      throw new HttpError(
+        409,
+        'La reserva debe estar confirmada antes de marcarla como finalizada.',
+        'INVALID_BOOKING_TRANSITION',
+      );
+    }
+    if (role !== 'ADMIN' && booking.professionalId !== userId) {
+      throw new HttpError(403, 'Solo el profesional asignado puede finalizar este trabajo.', 'FORBIDDEN');
+    }
+    return 'COMPLETED';
+  }
+
+  if (status === 'pending') {
+    throw new HttpError(409, 'No se puede volver una reserva al estado pendiente.', 'INVALID_BOOKING_TRANSITION');
+  }
+
+  const exhaustiveStatus: never = status;
+  return exhaustiveStatus;
 };
 
 export const bookingsRouter = Router();
@@ -168,6 +213,14 @@ bookingsRouter.post(
       throw new HttpError(409, 'No se puede reservar una solicitud cancelada.', 'SERVICE_REQUEST_CANCELLED');
     }
 
+    if (!['QUOTED', 'ASSIGNED'].includes(serviceRequest.status)) {
+      throw new HttpError(
+        409,
+        'Esta solicitud ya no permite crear reservas.',
+        'SERVICE_REQUEST_NOT_BOOKABLE',
+      );
+    }
+
     if (request.auth!.role === 'CLIENTE' && serviceRequest.clientId !== request.auth!.userId) {
       throw new HttpError(403, 'No puedes reservar una solicitud de otro cliente.', 'FORBIDDEN');
     }
@@ -184,6 +237,18 @@ bookingsRouter.post(
     }
 
     await ensureProfessionalExists(payload.professionalId);
+    const acceptedQuote = await prisma.quote.findFirst({
+      where: {
+        serviceRequestId: serviceRequest.id,
+        professionalId: payload.professionalId,
+        status: 'ACCEPTED',
+      },
+    });
+
+    if (!acceptedQuote) {
+      throw new HttpError(409, 'Acepta una cotizacion antes de reservar este profesional.', 'QUOTE_NOT_ACCEPTED');
+    }
+
     await ensureProfessionalAvailable(payload.professionalId, payload.scheduledAt);
 
     const booking = await prisma.booking.create({
@@ -229,30 +294,55 @@ bookingsRouter.patch(
       await ensureProfessionalAvailable(current.professionalId, payload.scheduledAt, current.id);
     }
 
-    const status = resolveAllowedStatus(request.auth!.role, payload.status);
-    const booking = await prisma.booking.update({
-      where: { id: current.id },
-      data: {
-        scheduledAt: payload.scheduledAt,
-        status,
-        notes: payload.notes,
-      },
-      include: bookingInclude,
+    const status = resolveAllowedStatus(request.auth!.role, request.auth!.userId, current, payload.status);
+    const bookingUpdateData = {
+      scheduledAt: payload.scheduledAt,
+      status,
+      notes: payload.notes,
+    } satisfies Prisma.BookingUpdateManyMutationInput;
+
+    const booking = await prisma.$transaction(async (tx): Promise<BookingWithDetails> => {
+      const updateResult = await tx.booking.updateMany({
+        where: {
+          id: current.id,
+          status: current.status,
+        },
+        data: bookingUpdateData,
+      });
+
+      if (updateResult.count !== 1) {
+        throw new HttpError(
+          409,
+          'La reserva cambio de estado. Actualiza la pantalla e intenta nuevamente.',
+          'INVALID_BOOKING_TRANSITION',
+        );
+      }
+
+      const updatedBooking = await tx.booking.findUnique({
+        where: { id: current.id },
+        include: bookingInclude,
+      });
+
+      if (!updatedBooking) {
+        throw new HttpError(404, 'Reserva no encontrada.', 'BOOKING_NOT_FOUND');
+      }
+
+      if (status === 'CANCELLED') {
+        await tx.serviceRequest.update({
+          where: { id: current.serviceRequestId },
+          data: { status: 'OPEN' },
+        });
+      }
+
+      if (status === 'COMPLETED') {
+        await tx.serviceRequest.update({
+          where: { id: current.serviceRequestId },
+          data: { status: 'COMPLETED' },
+        });
+      }
+
+      return updatedBooking;
     });
-
-    if (status === 'CANCELLED') {
-      await prisma.serviceRequest.update({
-        where: { id: current.serviceRequestId },
-        data: { status: 'OPEN' },
-      });
-    }
-
-    if (status === 'COMPLETED') {
-      await prisma.serviceRequest.update({
-        where: { id: current.serviceRequestId },
-        data: { status: 'COMPLETED' },
-      });
-    }
 
     if (status && status !== current.status) {
       if (status === 'CONFIRMED') {

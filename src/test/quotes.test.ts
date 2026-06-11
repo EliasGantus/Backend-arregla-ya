@@ -226,6 +226,30 @@ describe('quotes routes', () => {
     });
   });
 
+  it('rechaza aceptar una cotizacion si la solicitud no admite mas aceptaciones', async () => {
+    const app = createApp();
+    const client = makeUser();
+    const quote = makeQuote();
+
+    prismaMocks.userFindUnique.mockResolvedValue(client);
+    prismaMocks.quoteFindUnique.mockResolvedValue(
+      withServiceRequest(quote, makeServiceRequest({ status: 'CANCELLED' })),
+    );
+
+    const response = await request(app)
+      .patch('/quotes/quote-1')
+      .set('Authorization', bearerTokenFor(client))
+      .send({ status: 'accepted' });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({
+      code: 'REQUEST_NOT_ACCEPTING_QUOTES',
+      message: 'Esta solicitud ya no permite aceptar cotizaciones.',
+    });
+    expect(prismaMocks.quoteUpdate).not.toHaveBeenCalled();
+    expect(prismaMocks.serviceRequestUpdate).not.toHaveBeenCalled();
+  });
+
   it('permite que el cliente rechace una cotizacion de su solicitud', async () => {
     const app = createApp();
     const client = makeUser();

@@ -167,6 +167,14 @@ quotesRouter.patch(
     }
 
     const status = payload.status === 'accepted' ? 'ACCEPTED' : 'REJECTED';
+    if (status === 'ACCEPTED' && current.serviceRequest.status !== 'QUOTED') {
+      throw new HttpError(
+        409,
+        'Esta solicitud ya no permite aceptar cotizaciones.',
+        'REQUEST_NOT_ACCEPTING_QUOTES',
+      );
+    }
+
     const quote = await prisma.quote.update({
       where: { id: current.id },
       data: { status },

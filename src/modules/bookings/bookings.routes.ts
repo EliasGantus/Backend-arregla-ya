@@ -229,6 +229,18 @@ bookingsRouter.post(
     }
 
     await ensureProfessionalExists(payload.professionalId);
+    const acceptedQuote = await prisma.quote.findFirst({
+      where: {
+        serviceRequestId: serviceRequest.id,
+        professionalId: payload.professionalId,
+        status: 'ACCEPTED',
+      },
+    });
+
+    if (!acceptedQuote) {
+      throw new HttpError(409, 'Acepta una cotizacion antes de reservar este profesional.', 'QUOTE_NOT_ACCEPTED');
+    }
+
     await ensureProfessionalAvailable(payload.professionalId, payload.scheduledAt);
 
     const booking = await prisma.booking.create({

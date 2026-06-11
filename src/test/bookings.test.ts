@@ -1,4 +1,4 @@
-import type { Booking, Payment, Review, ServiceRequest, User } from '@prisma/client';
+import type { Booking, Payment, Quote, Review, ServiceRequest, User } from '@prisma/client';
 import request from 'supertest';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +10,7 @@ const prismaMocks = vi.hoisted(() => ({
   bookingFindUnique: vi.fn<(args: unknown) => Promise<BookingWithRelations | Booking | null>>(),
   bookingFindFirst: vi.fn<(args: unknown) => Promise<Booking | null>>(),
   bookingCreate: vi.fn<(args: unknown) => Promise<BookingWithRelations>>(),
+  quoteFindFirst: vi.fn<(args: unknown) => Promise<Quote | null>>(),
   serviceRequestFindUnique: vi.fn<(args: unknown) => Promise<ServiceRequest | null>>(),
   serviceRequestUpdate: vi.fn<(args: unknown) => Promise<ServiceRequest>>(),
   userFindUnique: vi.fn<(args: unknown) => Promise<User | null>>(),
@@ -32,6 +33,9 @@ vi.mock('../lib/prisma.js', () => ({
       findUnique: prismaMocks.bookingFindUnique,
       findFirst: prismaMocks.bookingFindFirst,
       create: prismaMocks.bookingCreate,
+    },
+    quote: {
+      findFirst: prismaMocks.quoteFindFirst,
     },
     serviceRequest: {
       findUnique: prismaMocks.serviceRequestFindUnique,
@@ -151,6 +155,18 @@ const makeBooking = (overrides: Partial<Booking> = {}): Booking => ({
   ...overrides,
 });
 
+const makeQuote = (overrides: Partial<Quote> = {}): Quote => ({
+  id: 'quote-1',
+  amount: '$85.000',
+  status: 'ACCEPTED',
+  message: 'Puedo resolverlo durante la tarde.',
+  createdAt: new Date('2026-04-02T00:00:00.000Z'),
+  updatedAt: new Date('2026-04-02T00:00:00.000Z'),
+  serviceRequestId: 'request-1',
+  professionalId: 'pro-1',
+  ...overrides,
+});
+
 const withRelations = (booking: Booking): BookingWithRelations => ({
   ...booking,
   client: {
@@ -201,6 +217,7 @@ describe('bookings routes', () => {
       }),
     );
     prismaMocks.txBookingUpdateMany.mockResolvedValue({ count: 1 });
+    prismaMocks.quoteFindFirst.mockResolvedValue(makeQuote());
   });
 
   it('crea una reserva para una solicitud propia si el profesional está disponible', async () => {
@@ -241,6 +258,38 @@ describe('bookings routes', () => {
     expect(createArgs?.data?.professionalId).toBe('pro-1');
     expect(createArgs?.data?.status).toBe('PENDING');
     expect(notificationMocks.notifyBookingCreated).toHaveBeenCalledWith(booking);
+  });
+
+  it('rechaza reservar con un profesional sin cotizacion aceptada', async () => {
+    const app = createApp();
+    const client = makeUser();
+    const professional = makeUser({
+      id: 'pro-1',
+      email: 'pro@arreglaya.com',
+      role: 'PROFESIONAL',
+    });
+    const serviceRequest = makeServiceRequest();
+
+    mockUsersById(client, professional);
+    prismaMocks.serviceRequestFindUnique.mockResolvedValue(serviceRequest);
+    prismaMocks.bookingFindFirst.mockResolvedValue(null);
+    prismaMocks.quoteFindFirst.mockResolvedValue(null);
+
+    const response = await request(app)
+      .post('/bookings')
+      .set('Authorization', bearerTokenFor(client))
+      .send({
+        serviceRequestId: 'request-1',
+        professionalId: 'pro-1',
+        scheduledAt: scheduledAt.toISOString(),
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({
+      code: 'QUOTE_NOT_ACCEPTED',
+      message: 'Acepta una cotizacion antes de reservar este profesional.',
+    });
+    expect(prismaMocks.bookingCreate).not.toHaveBeenCalled();
   });
 
   it('rechaza una reserva cuando el profesional ya tiene un turno activo en el horario', async () => {

@@ -213,6 +213,14 @@ bookingsRouter.post(
       throw new HttpError(409, 'No se puede reservar una solicitud cancelada.', 'SERVICE_REQUEST_CANCELLED');
     }
 
+    if (!['QUOTED', 'ASSIGNED'].includes(serviceRequest.status)) {
+      throw new HttpError(
+        409,
+        'Esta solicitud ya no permite crear reservas.',
+        'SERVICE_REQUEST_NOT_BOOKABLE',
+      );
+    }
+
     if (request.auth!.role === 'CLIENTE' && serviceRequest.clientId !== request.auth!.userId) {
       throw new HttpError(403, 'No puedes reservar una solicitud de otro cliente.', 'FORBIDDEN');
     }

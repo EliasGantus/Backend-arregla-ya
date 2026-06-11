@@ -228,7 +228,7 @@ describe('bookings routes', () => {
       email: 'pro@arreglaya.com',
       role: 'PROFESIONAL',
     });
-    const serviceRequest = makeServiceRequest();
+    const serviceRequest = makeServiceRequest({ status: 'QUOTED' });
     const booking = withRelations(makeBooking());
 
     mockUsersById(client, professional);
@@ -268,7 +268,7 @@ describe('bookings routes', () => {
       email: 'pro@arreglaya.com',
       role: 'PROFESIONAL',
     });
-    const serviceRequest = makeServiceRequest();
+    const serviceRequest = makeServiceRequest({ status: 'QUOTED' });
 
     mockUsersById(client, professional);
     prismaMocks.serviceRequestFindUnique.mockResolvedValue(serviceRequest);
@@ -292,6 +292,37 @@ describe('bookings routes', () => {
     expect(prismaMocks.bookingCreate).not.toHaveBeenCalled();
   });
 
+  it('rechaza reservar una solicitud que ya esta completada', async () => {
+    const app = createApp();
+    const client = makeUser();
+    const professional = makeUser({
+      id: 'pro-1',
+      email: 'pro@arreglaya.com',
+      role: 'PROFESIONAL',
+    });
+    const serviceRequest = makeServiceRequest({ status: 'COMPLETED' });
+
+    mockUsersById(client, professional);
+    prismaMocks.serviceRequestFindUnique.mockResolvedValue(serviceRequest);
+    prismaMocks.bookingFindFirst.mockResolvedValue(null);
+
+    const response = await request(app)
+      .post('/bookings')
+      .set('Authorization', bearerTokenFor(client))
+      .send({
+        serviceRequestId: 'request-1',
+        professionalId: 'pro-1',
+        scheduledAt: scheduledAt.toISOString(),
+      });
+
+    expect(response.status).toBe(409);
+    expect(response.body).toMatchObject({
+      code: 'SERVICE_REQUEST_NOT_BOOKABLE',
+      message: 'Esta solicitud ya no permite crear reservas.',
+    });
+    expect(prismaMocks.bookingCreate).not.toHaveBeenCalled();
+  });
+
   it('rechaza una reserva cuando el profesional ya tiene un turno activo en el horario', async () => {
     const app = createApp();
     const client = makeUser();
@@ -300,7 +331,7 @@ describe('bookings routes', () => {
       email: 'pro@arreglaya.com',
       role: 'PROFESIONAL',
     });
-    const serviceRequest = makeServiceRequest();
+    const serviceRequest = makeServiceRequest({ status: 'QUOTED' });
 
     mockUsersById(client, professional);
     prismaMocks.serviceRequestFindUnique.mockResolvedValue(serviceRequest);
